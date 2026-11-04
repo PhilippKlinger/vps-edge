@@ -1,0 +1,21 @@
+# Videoflix: frontend and API on one domain (no CORS, cookies SameSite=Strict).
+# Upstreams are network aliases on "edge", set in videoflix-deploy.
+videoflix.philipp-klinger.com {
+	import security_headers
+	encode zstd gzip
+
+	# Everything Django serves: API (incl. HLS streams), admin, its static files and API docs
+	@backend path /api/* /admin/* /static/* /swagger/* /redoc/*
+	handle @backend {
+		# Uploads are limited to 50 MB in Django; stop larger bodies here before they are buffered
+		request_body {
+			max_size 55MB
+		}
+		# Caddy sets X-Forwarded-For to the client address (TRUSTED_PROXY_COUNT=1 in Django)
+		reverse_proxy videoflix-web:8000
+	}
+
+	handle {
+		reverse_proxy videoflix-frontend:8080
+	}
+}
