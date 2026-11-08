@@ -1,0 +1,7 @@
+# Status page: placeholder until Uptime Kuma runs, so the domain already has a valid certificate.
+# The portfolio sends HSTS with includeSubDomains; without a certificate browsers would block this name.
+status.philipp-klinger.com {
+	import security_headers
+
+	respond "Status page coming soon." 503
+}

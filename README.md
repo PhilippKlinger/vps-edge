@@ -7,6 +7,7 @@ Shared edge proxy for all projects on the VPS: [Caddy](https://caddyserver.com/)
 - `compose.yaml`: Caddy (pinned by digest), the only service with published ports (80, 443, 443/udp), dropped capabilities
 - `Caddyfile`: automatic HTTPS, admin API off, shared `security_headers` snippet, imports `sites/*.caddy`
 - `sites/videoflix.caddy`: `/api/`, `/admin/`, `/static/`, API docs → `videoflix-web:8000` (body limit 55 MB), everything else → `videoflix-frontend:8080`
+- `sites/status.caddy`: placeholder for `status.philipp-klinger.com` (503) until Uptime Kuma runs, so the name already has a valid certificate under HSTS `includeSubDomains`
 - Docker network `edge`: project stacks join it as an external network and are reached by their network alias
 - `host/journald-retention.conf`: deletes logs on the VPS after 14 days at the latest
 
