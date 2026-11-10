@@ -1,5 +1,10 @@
 # vps-edge
 
+[![CI](https://github.com/PhilippKlinger/vps-edge/actions/workflows/ci.yml/badge.svg)](https://github.com/PhilippKlinger/vps-edge/actions/workflows/ci.yml)
+[![Security Checks](https://github.com/PhilippKlinger/vps-edge/actions/workflows/security.yml/badge.svg)](https://github.com/PhilippKlinger/vps-edge/actions/workflows/security.yml)
+[![CodeQL](https://github.com/PhilippKlinger/vps-edge/actions/workflows/codeql.yml/badge.svg)](https://github.com/PhilippKlinger/vps-edge/actions/workflows/codeql.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/PhilippKlinger/vps-edge/badge)](https://scorecard.dev/viewer/?uri=github.com/PhilippKlinger/vps-edge)
+
 Shared edge proxy for all projects on the VPS: [Caddy](https://caddyserver.com/) terminates TLS and routes requests to the project stacks.
 
 ## Contents
@@ -7,8 +12,10 @@ Shared edge proxy for all projects on the VPS: [Caddy](https://caddyserver.com/)
 - `compose.yaml`: Caddy (pinned by digest), the only service with published ports (80, 443, 443/udp), dropped capabilities
 - `Caddyfile`: automatic HTTPS, admin API off, shared `security_headers` snippet, imports `sites/*.caddy`
 - `sites/videoflix.caddy`: `/api/`, `/admin/`, `/static/`, API docs → `videoflix-web:8000` (body limit 55 MB), everything else → `videoflix-frontend:8080`
-- `sites/status.caddy`: placeholder for `status.philipp-klinger.com` (503) until Uptime Kuma runs, so the name already has a valid certificate under HSTS `includeSubDomains`
+- `sites/status.caddy`: public status page of Uptime Kuma ([vps-monitoring](https://github.com/PhilippKlinger/vps-monitoring)) at `status.philipp-klinger.com`. Only the status page, its read-only API, badges and static files are let through (GET/HEAD); dashboard, login, socket.io and metrics return 404
 - Docker network `edge`: project stacks join it as an external network and are reached by their network alias
+- Docker network `monitoring` (internal): only Caddy and Uptime Kuma; Kuma cannot reach any project container. It is defined here, so the proxy starts even without the monitoring stack
+- `.github/workflows/`: CI (compose and Caddyfile validation, actionlint, smoke test, Trivy scan of the pinned image), Security Checks (gitleaks, zizmor), CodeQL for the workflows, OpenSSF Scorecard
 - `host/journald-retention.conf`: deletes logs on the VPS after 14 days at the latest
 
 Project stacks (e.g. [videoflix-deploy](https://github.com/PhilippKlinger/videoflix-deploy)) stay independent and replaceable; they never publish ports themselves. No access log is written, because activation and reset tokens are part of request paths.
@@ -45,6 +52,15 @@ journalctl --output=short-iso | head -n 2                               # oldest
 ```
 
 ## Check
+
+The CI starts the real proxy configuration with certificates from Caddy's local CA and stand-in upstreams ([whoami](https://github.com/traefik/whoami)) that answer with their hostname. It checks on every pull request:
+
+- Videoflix: `/api/`, `/admin/`, `/static/` reach the backend, everything else the frontend
+- Status page: `/status/*`, the status page API, badges and assets reach Kuma; `/` redirects to `/status/videoflix`; dashboard, settings, socket.io, metrics, push, setup and every non-GET request return 404
+- HTTP redirects to HTTPS; HSTS, `nosniff` and the referrer policy are set, the `Server` header is removed
+- The network `monitoring` is internal
+
+Locally:
 
 ```bash
 docker run --rm -e ACME_EMAIL=test@example.com -v "$PWD/Caddyfile:/etc/caddy/Caddyfile:ro" -v "$PWD/sites:/etc/caddy/sites:ro" caddy:2.11.7-alpine caddy validate --config /etc/caddy/Caddyfile
