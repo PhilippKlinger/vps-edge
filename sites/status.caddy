@@ -1,7 +1,23 @@
-# Status page: placeholder until Uptime Kuma runs, so the domain already has a valid certificate.
-# The portfolio sends HSTS with includeSubDomains; without a certificate browsers would block this name.
+# Public status page: Uptime Kuma from vps-monitoring, reached over the internal network "monitoring".
+# Kuma serves dashboard, login and socket.io on the same port, so only the public status page
+# is let through; everything else returns 404 here. The dashboard is used through an SSH tunnel.
 status.philipp-klinger.com {
 	import security_headers
+	encode zstd gzip
 
-	respond "Status page coming soon." 503
+	# Start page: the Videoflix status page
+	redir / /status/videoflix
+
+	# Status page, its read-only API, badges and the static files of the single-page app
+	@public {
+		method GET HEAD
+		path /status/* /api/status-page/* /api/badge/* /assets/* /upload/* /icon.svg /favicon.ico /apple-touch-icon.png /apple-touch-icon-precomposed.png /manifest.json /robots.txt
+	}
+	handle @public {
+		reverse_proxy uptime-kuma:3001
+	}
+
+	handle {
+		respond 404
+	}
 }

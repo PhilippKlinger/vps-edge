@@ -4,7 +4,7 @@ name: edge
 
 services:
   caddy:
-    image: caddy:2.11.7-alpine@sha256:e70b164da81ef698b3ad19af799ea6086ce6d9e48ed4079eb9fe26f6fbf14ee5
+    image: caddy:2.11.9-alpine@sha256:0bbb055bda6793c999bde78b1b5ce3e89f829fb031af2cf50056ea1246559fee
     ports:
       - "80:80"
       - "443:443"
@@ -24,12 +24,18 @@ services:
     # json-file only rotates by size; the time limit comes from host/journald-retention.conf
     logging:
       driver: journald
-    networks: [edge]
+    # edge: project stacks; monitoring: Uptime Kuma (vps-monitoring), nothing else
+    networks: [edge, monitoring]
 
 networks:
   edge:
     # Fixed name, so project stacks can join it as an external network
     name: edge
+  monitoring:
+    # Fixed name, joined by vps-monitoring. Internal: only Caddy and Kuma, no route outside.
+    # Owned here, so the proxy starts even if the monitoring stack is missing.
+    name: monitoring
+    internal: true
 
 volumes:
   # Certificates and ACME account: keep this volume, otherwise Caddy requests new certificates
