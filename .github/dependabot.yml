@@ -5,7 +5,18 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    # Wait 14 days before proposing a new release; security updates are not delayed.
     cooldown:
       default-days: 14
     commit-message:
       prefix: "chore(deps)"
+
+  # Pinned action SHAs in .github/workflows
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 14
+    commit-message:
+      prefix: "ci(deps)"
