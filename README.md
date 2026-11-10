@@ -63,5 +63,5 @@ The CI starts the real proxy configuration with certificates from Caddy's local 
 Locally:
 
 ```bash
-docker run --rm -e ACME_EMAIL=test@example.com -v "$PWD/Caddyfile:/etc/caddy/Caddyfile:ro" -v "$PWD/sites:/etc/caddy/sites:ro" caddy:2.11.7-alpine caddy validate --config /etc/caddy/Caddyfile
+docker run --rm -e ACME_EMAIL=test@example.com -v "$PWD/Caddyfile:/etc/caddy/Caddyfile:ro" -v "$PWD/sites:/etc/caddy/sites:ro" caddy:2.11.9-alpine caddy validate --config /etc/caddy/Caddyfile
 ```
