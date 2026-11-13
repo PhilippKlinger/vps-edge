@@ -5,8 +5,8 @@ status.philipp-klinger.com {
 	import security_headers
 	encode zstd gzip
 
-	# Start page: the Videoflix status page
-	redir / /status/videoflix
+	# Start page: the platform overview with one group per project
+	redir / /status/overview
 
 	# Status page, its read-only API, badges and the static files of the single-page app
 	@public {

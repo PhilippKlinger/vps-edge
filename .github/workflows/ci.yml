@@ -159,7 +159,7 @@ jobs:
           location="$(curl -sk -o /dev/null -w '%{redirect_url}' \
             --resolve status.philipp-klinger.com:443:127.0.0.1 https://status.philipp-klinger.com/)"
           echo "Start page: ${location}"
-          test "${location}" = "https://status.philipp-klinger.com/status/videoflix"
+          test "${location}" = "https://status.philipp-klinger.com/status/overview"
 
           headers="$(curl -sk -D - -o /dev/null \
             --resolve status.philipp-klinger.com:443:127.0.0.1 https://status.philipp-klinger.com/status/videoflix)"
