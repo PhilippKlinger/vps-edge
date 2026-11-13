@@ -4,54 +4,32 @@
 [![Security Checks](https://github.com/PhilippKlinger/vps-edge/actions/workflows/security.yml/badge.svg)](https://github.com/PhilippKlinger/vps-edge/actions/workflows/security.yml)
 [![CodeQL](https://github.com/PhilippKlinger/vps-edge/actions/workflows/codeql.yml/badge.svg)](https://github.com/PhilippKlinger/vps-edge/actions/workflows/codeql.yml)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/PhilippKlinger/vps-edge/badge)](https://scorecard.dev/viewer/?uri=github.com/PhilippKlinger/vps-edge)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 Shared edge proxy for all projects on the VPS: [Caddy](https://caddyserver.com/) terminates TLS and routes requests to the project stacks.
+
+Where the proxy sits in the platform: [platform diagram](https://github.com/PhilippKlinger/vps-monitoring#architecture) in vps-monitoring.
 
 ## Contents
 
 - `compose.yaml`: Caddy (pinned by digest), the only service with published ports (80, 443, 443/udp), dropped capabilities
 - `Caddyfile`: automatic HTTPS, admin API off, shared `security_headers` snippet, imports `sites/*.caddy`
-- `sites/videoflix.caddy`: `/api/`, `/admin/`, `/static/`, API docs → `videoflix-web:8000` (body limit 55 MB), everything else → `videoflix-frontend:8080`
+- `sites/videoflix.caddy`: `/api/`, `/admin/`, `/static/`, API docs → `videoflix-web` (body limit 55 MB), everything else → `videoflix-frontend`
 - `sites/status.caddy`: public status page of Uptime Kuma ([vps-monitoring](https://github.com/PhilippKlinger/vps-monitoring)) at `status.philipp-klinger.com`. Only the status page, its read-only API, badges and static files are let through (GET/HEAD); dashboard, login, socket.io and metrics return 404
 - Docker network `edge`: project stacks join it as an external network and are reached by their network alias
 - Docker network `monitoring` (internal): only Caddy and Uptime Kuma; Kuma cannot reach any project container. It is defined here, so the proxy starts even without the monitoring stack
-- `.github/workflows/`: CI (compose and Caddyfile validation, actionlint, smoke test, Trivy scan of the pinned image), Security Checks (gitleaks, zizmor), CodeQL for the workflows, OpenSSF Scorecard
+- `.github/workflows/`: the checks under [What CI checks](#what-ci-checks), plus OpenSSF Scorecard
 - `host/journald-retention.conf`: deletes logs on the VPS after 14 days at the latest
 
-Project stacks (e.g. [videoflix-deploy](https://github.com/PhilippKlinger/videoflix-deploy)) stay independent and replaceable; they never publish ports themselves. No access log is written, because activation and reset tokens are part of request paths.
-
-## Usage on the server
-
-```bash
-cd /srv/edge
-cp .env.example .env && chmod 600 .env   # set ACME_EMAIL
-docker compose up -d
-docker compose logs -f caddy             # certificate issuance
-```
-
-A new project gets its own file in `sites/`, then `docker compose restart caddy`. DNS for the domain must point to the VPS before the first start, otherwise the certificate request fails.
+Project stacks (e.g. [videoflix-deploy](https://github.com/PhilippKlinger/videoflix-deploy)) stay independent and replaceable; they never publish ports themselves. A new project gets its own file in `sites/`. No access log is written, because activation and reset tokens are part of request paths.
 
 ## Log retention
 
 The privacy policy promises that server logs are deleted after 14 days at the latest. `json-file` can only rotate by size, so a quiet container could keep old entries for months. All containers therefore log to journald, which has a time limit. Caddy writes no access log and no log file, so there is nothing to rotate on its side; its error log can still contain client addresses, and that ends up in the journal too.
 
-The setting applies to the whole journal of the host, so system logs are kept for 14 days as well. Set it up before the stacks switch to journald:
+The setting in `host/journald-retention.conf` applies to the whole journal of the host, so system logs are kept for 14 days as well. It is installed once per host, before the stacks switch to journald; recreating the containers afterwards also removes their old `json-file` logs.
 
-```bash
-sudo install -d /etc/systemd/journald.conf.d
-sudo cp /srv/edge/host/journald-retention.conf /etc/systemd/journald.conf.d/retention.conf
-sudo systemctl restart systemd-journald
-systemd-analyze cat-config systemd/journald.conf | grep -E 'MaxFileSec|MaxRetentionSec'
-```
-
-Then recreate the containers (`docker compose up -d` in each stack); this also removes their old `json-file` logs. Check:
-
-```bash
-docker inspect edge-caddy-1 --format '{{.HostConfig.LogConfig.Type}}'   # journald
-journalctl --output=short-iso | head -n 2                               # oldest entry, 14 days at most
-```
-
-## Check
+## What CI checks
 
 The CI starts the real proxy configuration with certificates from Caddy's local CA and stand-in upstreams ([whoami](https://github.com/traefik/whoami)) that answer with their hostname. It checks on every pull request:
 
@@ -59,6 +37,8 @@ The CI starts the real proxy configuration with certificates from Caddy's local 
 - Status page: `/status/*`, the status page API, badges and assets reach Kuma; `/` redirects to `/status/videoflix`; dashboard, settings, socket.io, metrics, push, setup and every non-GET request return 404
 - HTTP redirects to HTTPS; HSTS, `nosniff` and the referrer policy are set, the `Server` header is removed
 - The network `monitoring` is internal
+
+Every pull request to `main` must also pass compose and Caddyfile validation, actionlint, a Trivy scan of the pinned Caddy image, the secret scan (gitleaks), workflow lint (zizmor) and CodeQL for the workflows.
 
 Locally:
 
@@ -76,7 +56,7 @@ Sorted by what the monitors report. Commands run in `/srv/edge`. Project-specifi
 
 **Check:** `docker compose ps` shows Caddy stopped or restarting; `docker compose logs --tail 50 caddy` names the file and line of a config error.
 
-**Fix:** the usual cause is a change to `Caddyfile` or `sites/`. Validate it with the command under [Check](#check) and correct it through a pull request. Until then restore the last working files from Git and `docker compose restart caddy`.
+**Fix:** the usual cause is a change to `Caddyfile` or `sites/`. Validate it with the command under [What CI checks](#what-ci-checks) and correct it through a pull request. Until then restore the last working files from Git and `docker compose restart caddy`.
 
 **Way back:** none needed once the fixed config is merged and Caddy is restarted.
 
@@ -99,3 +79,16 @@ Sorted by what the monitors report. Commands run in `/srv/edge`. Project-specifi
 **Fix:** correct DNS or firewall, then `docker compose restart caddy`; Caddy retries on its own. After a rate limit of Let's Encrypt wait instead of restarting in a loop.
 
 **Way back:** none needed; valid certificates stay in the volume `caddy_data`.
+
+## Related repositories
+
+| Repository | Role |
+|---|---|
+| [videoflix-deploy](https://github.com/PhilippKlinger/videoflix-deploy) | Videoflix stack behind the proxy, network `edge` |
+| [vps-monitoring](https://github.com/PhilippKlinger/vps-monitoring) | Uptime Kuma, its status page is published through this proxy (network `monitoring`) |
+| [vps-incident-assistant](https://github.com/PhilippKlinger/vps-incident-assistant) | Uses the Troubleshooting section above as runbook |
+| [v-server-setup](https://github.com/PhilippKlinger/v-server-setup) | How the server is set up and hardened |
+
+## License
+
+[MIT](LICENSE)
