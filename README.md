@@ -1,12 +1,12 @@
 # vps-edge
 
+Shared edge proxy for all projects on the VPS: [Caddy](https://caddyserver.com/) terminates TLS and routes requests to the project stacks.
+
 [![CI](https://github.com/PhilippKlinger/vps-edge/actions/workflows/ci.yml/badge.svg)](https://github.com/PhilippKlinger/vps-edge/actions/workflows/ci.yml)
 [![Security Checks](https://github.com/PhilippKlinger/vps-edge/actions/workflows/security.yml/badge.svg)](https://github.com/PhilippKlinger/vps-edge/actions/workflows/security.yml)
 [![CodeQL](https://github.com/PhilippKlinger/vps-edge/actions/workflows/codeql.yml/badge.svg)](https://github.com/PhilippKlinger/vps-edge/actions/workflows/codeql.yml)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/PhilippKlinger/vps-edge/badge)](https://scorecard.dev/viewer/?uri=github.com/PhilippKlinger/vps-edge)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-
-Shared edge proxy for all projects on the VPS: [Caddy](https://caddyserver.com/) terminates TLS and routes requests to the project stacks.
 
 Where the proxy sits in the platform: [platform diagram](https://github.com/PhilippKlinger/vps-monitoring#architecture) in vps-monitoring.
 
