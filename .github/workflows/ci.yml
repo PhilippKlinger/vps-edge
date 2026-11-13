@@ -141,7 +141,9 @@ jobs:
 
           videoflix=videoflix.philipp-klinger.com
           expect "${videoflix}" GET /api/health/ 200 videoflix-web
-          expect "${videoflix}" GET /admin/ 200 videoflix-web
+          expect "${videoflix}" GET /admin/ 404
+          expect "${videoflix}" GET /admin/login/ 404
+          expect "${videoflix}" GET /admin 404
           expect "${videoflix}" GET /static/app.css 200 videoflix-web
           expect "${videoflix}" GET / 200 videoflix-frontend
           expect "${videoflix}" GET /browse 200 videoflix-frontend

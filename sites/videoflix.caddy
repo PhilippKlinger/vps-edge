@@ -4,8 +4,14 @@ videoflix.philipp-klinger.com {
 	import security_headers
 	encode zstd gzip
 
-	# Everything Django serves: API (incl. HLS streams), admin, its static files and API docs
-	@backend path /api/* /admin/* /static/* /swagger/* /redoc/*
+	# The Django admin is reached only through an SSH tunnel, never over this domain
+	@admin path /admin /admin/*
+	handle @admin {
+		respond 404
+	}
+
+	# Everything else Django serves: API (incl. HLS streams), static files and API docs
+	@backend path /api/* /static/* /swagger/* /redoc/*
 	handle @backend {
 		# Uploads are limited to 50 MB in Django; stop larger bodies here before they are buffered
 		request_body {
